@@ -1,0 +1,25 @@
+# Built application files and build artifacts
+*.apk
+*.aar
+*.aab
+**/build/
+
+# Gradle directories and local configuration
+.gradle/
+local.properties
+
+# Android Studio / IntelliJ IDEA files
+.idea/
+*.iml
+*.iws
+
+# Log files and crash reports
+*.log
+
+# Device / Profiler outputs
+*.hprof
+captures/
+
+# OS-specific files (Mac and Windows)
+.DS_Store
+Thumbs.db
