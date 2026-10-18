@@ -1,6 +1,7 @@
 package com.kez.Calculator
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.mutableStateOf
@@ -8,6 +9,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import com.kez.Calculator.ui.components.CalculatorScreen
+import kotlin.math.roundToLong
 
 enum class ExpressionState  {
     Idle,
@@ -27,6 +29,11 @@ class MainActivity : ComponentActivity() {
             var hasPoint by rememberSaveable { mutableStateOf(false) }
 
             fun formatDouble(value: Double): String {
+
+                if (value.isNaN()) {
+
+                }
+                val rounded = (value * 1e12).roundToLong() / 1e12
                 return if (value % 1.0 == 0.0) value.toLong().toString() else value.toString()
             }
 
@@ -36,6 +43,22 @@ class MainActivity : ComponentActivity() {
                 pendingOperation = ""
                 hasPoint = false
             }
+
+            fun calculate(validNum: Double) {
+                if (pendingOperation == "/" && validNum == 0.0) {
+                    state = ExpressionState.Error
+                    return
+                }
+                when(pendingOperation) {
+                    "+" -> operand = operand?.plus(validNum)
+                    "-" -> operand = operand?.minus(validNum)
+                    "*" -> operand = operand?.times(validNum)
+                    "/" -> operand = operand?.div(validNum)
+                }
+                state = ExpressionState.RightInput
+                operand?.let { displayText = formatDouble(it) }
+            }
+
             val onButtonClick: (String) -> Unit = { symbol ->
                 when(state) {
                     ExpressionState.Idle -> when(symbol) {
@@ -61,9 +84,11 @@ class MainActivity : ComponentActivity() {
                             pendingOperation = symbol
                             state = ExpressionState.OperatorInput
                         }
-                        "." -> hasPoint.not().let{
-                            hasPoint = true
-                            displayText += symbol
+                        "." -> {
+                            if (!hasPoint){
+                                hasPoint = true
+                                displayText += symbol
+                            }
                         }
                         "C" -> reset()
                     }
@@ -88,24 +113,20 @@ class MainActivity : ComponentActivity() {
                         in "1".."9" -> {
                             displayText += symbol
                         }
-                        "." -> hasPoint.not().let{
-                            hasPoint = true
-                            displayText += symbol
+                        "." -> {
+                           if (!hasPoint) {
+                                hasPoint = true
+                                displayText += symbol
+                            }
                         }
-                        "=" -> displayText.toDoubleOrNull()?.let{ validNum ->
+                        "+","-","/","*" -> displayText.toDoubleOrNull()?.let{validNum ->
+                            calculate(validNum)
+                            pendingOperation = symbol
+                            state = ExpressionState.OperatorInput
 
-                            if (pendingOperation == "/" && validNum == 0.0) {
-                                state = ExpressionState.Error
-                                return@let
-                            }
-                            when(pendingOperation) {
-                                "+" -> operand = operand?.plus(validNum)
-                                "-" -> operand = operand?.minus(validNum)
-                                "*" -> operand = operand?.times(validNum)
-                                "/" -> operand = operand?.div(validNum)
-                            }
-                            state = ExpressionState.RightInput
-                            operand?.let { displayText = formatDouble(it) }
+                        }
+                        "=" -> displayText.toDoubleOrNull()?.let{
+                            validNum -> calculate(validNum)
                         }
                         "C" -> reset()
                     }
