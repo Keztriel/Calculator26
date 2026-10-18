@@ -9,110 +9,115 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import com.kez.Calculator.ui.components.CalculatorScreen
 
+enum class ExpressionState  {
+    Idle,
+    RightInput,
+    OperatorInput,
+    LeftInput,
+    Error
+}
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             var displayText by rememberSaveable { mutableStateOf("0") }
-            var isError by rememberSaveable { mutableStateOf(false) }
+            var state by rememberSaveable { mutableStateOf<ExpressionState>(ExpressionState.Idle) }
             var operand by rememberSaveable { mutableStateOf<Double?>(null) }
             var pendingOperation by rememberSaveable { mutableStateOf<String?>(null) }
-            var isReadyForNewInput by rememberSaveable { mutableStateOf(false) }
             var hasPoint by rememberSaveable { mutableStateOf(false) }
 
+            fun formatDouble(value: Double): String {
+                return if (value % 1.0 == 0.0) value.toLong().toString() else value.toString()
+            }
+
+            fun reset() {
+                displayText = "0"
+                state = ExpressionState.Idle
+                pendingOperation = ""
+                hasPoint = false
+            }
             val onButtonClick: (String) -> Unit = { symbol ->
-                when (symbol) {
-                    "C" -> {
-                        displayText = "0"
-                        isError = false
-                        operand = null
-                        pendingOperation = null
-                        isReadyForNewInput = false
-                        hasPoint = false
-                    }
-                    "+", "-", "*", "/" -> {
-                        if (!isError) {
-                            val currentValue = displayText.toDoubleOrNull()
-                            if (currentValue != null) {
-                                if (pendingOperation != null && !isReadyForNewInput) {
-                                    val firstValue = operand ?: currentValue
-                                    val result = when (pendingOperation) {
-                                        "+" -> firstValue + currentValue
-                                        "-" -> firstValue - currentValue
-                                        "*" -> firstValue * currentValue
-                                        "/" -> if (currentValue == 0.0) Double.NaN else firstValue / currentValue
-                                        else -> currentValue
-                                    }
-
-                                    if (result.isNaN() || result.isInfinite()) {
-                                        isError = true
-                                        displayText = "0"
-                                        operand = null
-                                    } else {
-                                        displayText = if (result % 1.0 == 0.0) result.toLong().toString() else result.toString()
-                                        operand = result
-                                    }
-                                } else {
-                                    operand = currentValue
-                                }
-                                pendingOperation = symbol
-                                isReadyForNewInput = true
-                            }
-                        }
-                    }
-                    "=" -> {
-                        if (!isError && pendingOperation != null) {
-                            val currentValue = displayText.toDoubleOrNull()
-                            val firstValue = operand
-                            if (currentValue != null && firstValue != null) {
-                                val result = when (pendingOperation) {
-                                    "+" -> firstValue + currentValue
-                                    "-" -> firstValue - currentValue
-                                    "*" -> firstValue * currentValue
-                                    "/" -> if (currentValue == 0.0) Double.NaN else firstValue / currentValue
-                                    else -> currentValue
-                                }
-
-                                if (result.isNaN() || result.isInfinite()) {
-                                    isError = true
-                                    displayText = "0"
-                                    operand = null
-                                } else {
-                                    displayText = if (result % 1.0 == 0.0) result.toLong().toString() else result.toString()
-                                    operand = result
-                                }
-                                pendingOperation = null
-                                isReadyForNewInput = true
-                            }
-                        }
-                    }
-                    "." -> {
-                        if (!isError && !hasPoint) {
-                            if (isReadyForNewInput) {
-                                displayText = "0."
-                                isReadyForNewInput = false
-                            } else {
-                                displayText += "."
-                            }
-                            hasPoint = true
-                        }
-                    }
-                    else -> {
-                        if (displayText == "0" || isReadyForNewInput || isError) {
+                when(state) {
+                    ExpressionState.Idle -> when(symbol) {
+                        in "1".."9" -> {
                             displayText = symbol
-                            isError = false
-                            isReadyForNewInput = false
-                            if (symbol != "0") { hasPoint = false}
-                        } else {
+                            state = ExpressionState.RightInput
+                        }
+                        "." -> {
+                            hasPoint = true
+                            displayText = "0."
+                            state = ExpressionState.RightInput
+                        }
+                        "-" -> {
+                            displayText = "-"
+                            state = ExpressionState.RightInput
+                        }
+                    }
+                    ExpressionState.RightInput -> when(symbol) {
+                        in "0".."9" -> {
                             displayText += symbol
                         }
+                        "+","-","/","*" -> {
+                            pendingOperation = symbol
+                            state = ExpressionState.OperatorInput
+                        }
+                        "." -> hasPoint.not().let{
+                            hasPoint = true
+                            displayText += symbol
+                        }
+                        "C" -> reset()
+                    }
+                    ExpressionState.OperatorInput -> when(symbol) {
+                        in "0".."9" -> displayText.toDoubleOrNull()?.let {
+                            validNum -> operand = validNum
+                            displayText = symbol
+                            hasPoint = false
+                            state = ExpressionState.LeftInput
+                        } ?: run {
+                            state = ExpressionState.Error
+                        }
+                        "+","-","/","*" -> {
+                            pendingOperation = symbol
+                        }
+                        "C" -> reset()
+                    }
+                    ExpressionState.LeftInput -> when(symbol) {
+                        "0" -> {
+                            if (displayText != "0") displayText += symbol
+                        }
+                        in "1".."9" -> {
+                            displayText += symbol
+                        }
+                        "." -> hasPoint.not().let{
+                            hasPoint = true
+                            displayText += symbol
+                        }
+                        "=" -> displayText.toDoubleOrNull()?.let{ validNum ->
+
+                            if (pendingOperation == "/" && validNum == 0.0) {
+                                state = ExpressionState.Error
+                                return@let
+                            }
+                            when(pendingOperation) {
+                                "+" -> operand = operand?.plus(validNum)
+                                "-" -> operand = operand?.minus(validNum)
+                                "*" -> operand = operand?.times(validNum)
+                                "/" -> operand = operand?.div(validNum)
+                            }
+                            state = ExpressionState.RightInput
+                            operand?.let { displayText = formatDouble(it) }
+                        }
+                        "C" -> reset()
+                    }
+                    ExpressionState.Error -> {
+                        reset()
                     }
                 }
             }
 
             CalculatorScreen(
                 displayText = displayText,
-                isError = isError,
+                isError = state == ExpressionState.Error,
                 onButtonClick = onButtonClick
             )
         }
