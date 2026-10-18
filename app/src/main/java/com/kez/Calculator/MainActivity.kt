@@ -18,6 +18,7 @@ class MainActivity : ComponentActivity() {
             var operand by rememberSaveable { mutableStateOf<Double?>(null) }
             var pendingOperation by rememberSaveable { mutableStateOf<String?>(null) }
             var isReadyForNewInput by rememberSaveable { mutableStateOf(false) }
+            var hasPoint by rememberSaveable { mutableStateOf(false) }
 
             val onButtonClick: (String) -> Unit = { symbol ->
                 when (symbol) {
@@ -27,6 +28,7 @@ class MainActivity : ComponentActivity() {
                         operand = null
                         pendingOperation = null
                         isReadyForNewInput = false
+                        hasPoint = false
                     }
                     "+", "-", "*", "/" -> {
                         if (!isError) {
@@ -84,11 +86,23 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
+                    "." -> {
+                        if (!isError && !hasPoint) {
+                            if (isReadyForNewInput) {
+                                displayText = "0."
+                                isReadyForNewInput = false
+                            } else {
+                                displayText += "."
+                            }
+                            hasPoint = true
+                        }
+                    }
                     else -> {
                         if (displayText == "0" || isReadyForNewInput || isError) {
                             displayText = symbol
                             isError = false
                             isReadyForNewInput = false
+                            if (symbol != "0") { hasPoint = false}
                         } else {
                             displayText += symbol
                         }

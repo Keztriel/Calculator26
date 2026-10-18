@@ -45,7 +45,7 @@ fun CalculatorScreen(
         listOf("1", "2", "3", "-"),
         listOf("4", "5", "6", "*"),
         listOf("7", "8", "9", "/"),
-        listOf("C", "0", "=", "+")
+        listOf(".", "0", "=", "+")
     )
 
     val buttonColors = listOf(
@@ -67,19 +67,44 @@ fun CalculatorScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.Bottom
         ) {
-            Text(
-                text = textToDisplay,
-                fontSize = 48.sp,
-                softWrap = true,
-                maxLines = 1,
-                textAlign = TextAlign.End,
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
-                    .wrapContentHeight(Alignment.Bottom)
-                    .padding(bottom = 32.dp)
-                    .testTag("result"),
-            )
+                    .weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.Bottom
+            ) {
+                Text(
+                    text = textToDisplay,
+                    fontSize = 48.sp,
+                    softWrap = true,
+                    maxLines = 1,
+                    textAlign = TextAlign.Start,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(3f)
+                        .padding(bottom = 32.dp)
+                        .testTag("result"),
+                )
+
+                Button(
+                    onClick = { onButtonClick("C") },
+                    colors = ButtonDefaults.buttonColors(opColor),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .then(
+                            if (isLandscape) Modifier.height(40.dp) else Modifier.aspectRatio(1f)
+                        )
+                ) {
+                    Text(
+                        text = "C",
+                        fontSize = 24.sp,
+                        color = androidx.compose.ui.graphics.Color.White
+                    )
+                }
+
+            }
 
             buttons.forEachIndexed { rowIndex, row ->
                 Row(
