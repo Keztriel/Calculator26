@@ -30,11 +30,12 @@ class MainActivity : ComponentActivity() {
 
             fun formatDouble(value: Double): String {
 
-                if (value.isNaN()) {
-
+                if (value.isNaN() || value.isInfinite()) {
+                    state = ExpressionState.Error
+                    return "0"
                 }
                 val rounded = (value * 1e12).roundToLong() / 1e12
-                return if (value % 1.0 == 0.0) value.toLong().toString() else value.toString()
+                return if (rounded % 1.0 == 0.0) rounded.toLong().toString() else rounded.toString()
             }
 
             fun reset() {
@@ -45,10 +46,10 @@ class MainActivity : ComponentActivity() {
             }
 
             fun calculate(validNum: Double) {
-                if (pendingOperation == "/" && validNum == 0.0) {
-                    state = ExpressionState.Error
-                    return
-                }
+//                if (pendingOperation == "/" && validNum == 0.0) {
+//                    state = ExpressionState.Error
+//                    return
+//                }
                 when(pendingOperation) {
                     "+" -> operand = operand?.plus(validNum)
                     "-" -> operand = operand?.minus(validNum)
@@ -75,6 +76,10 @@ class MainActivity : ComponentActivity() {
                             displayText = "-"
                             state = ExpressionState.RightInput
                         }
+                        "+","/","*" -> {
+                            pendingOperation = symbol
+                            state = ExpressionState.OperatorInput
+                        }
                     }
                     ExpressionState.RightInput -> when(symbol) {
                         in "0".."9" -> {
@@ -93,7 +98,7 @@ class MainActivity : ComponentActivity() {
                         "C" -> reset()
                     }
                     ExpressionState.OperatorInput -> when(symbol) {
-                        in "0".."9" -> displayText.toDoubleOrNull()?.let {
+                        in "0".."9","-" -> displayText.toDoubleOrNull()?.let {
                             validNum -> operand = validNum
                             displayText = symbol
                             hasPoint = false
@@ -101,9 +106,9 @@ class MainActivity : ComponentActivity() {
                         } ?: run {
                             state = ExpressionState.Error
                         }
-                        "+","-","/","*" -> {
-                            pendingOperation = symbol
-                        }
+//                        "+","-","/","*" -> {
+//                            pendingOperation = symbol
+//                        }
                         "C" -> reset()
                     }
                     ExpressionState.LeftInput -> when(symbol) {
@@ -134,6 +139,7 @@ class MainActivity : ComponentActivity() {
                         reset()
                     }
                 }
+            Log.d("State", state.toString())
             }
 
             CalculatorScreen(
